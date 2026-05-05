@@ -18,6 +18,13 @@ const actions = [
     icon: PdfIcon
   },
   {
+    id: "pdf-all-audio",
+    title: "PDF to All Audio",
+    copy: "Create a language ZIP from PDF text.",
+    tone: "pink",
+    icon: PdfIcon
+  },
+  {
     id: "realtime",
     title: "Realtime Transcription",
     copy: "Stream speech and save it as a PDF.",

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { api, downloadBlob, filenameFromHeaders } from "../api/client";
+import { API_URL, api, downloadFromUrl } from "../api/client";
 import { AudioPlayer } from "../components/AudioPlayer.jsx";
 import { FileUploader } from "../components/FileUploader.jsx";
 import { GlowButton } from "../components/GlowButton.jsx";
@@ -13,6 +13,9 @@ export function AudioToPdf() {
   const [filename, setFilename] = useState("voice2pdf");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [originalText, setOriginalText] = useState("");
+  const [translatedText, setTranslatedText] = useState("");
+  const [pdfUrl, setPdfUrl] = useState("");
   const audioUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
 
   async function convert() {
@@ -27,14 +30,20 @@ export function AudioToPdf() {
       formData.append("file", file);
       formData.append("language", language);
       formData.append("filename", filename || "voice2pdf");
+
       const response = await api.post("/audio-to-pdf", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        responseType: "blob"
+        headers: { "Content-Type": "multipart/form-data" }
       });
-      downloadBlob(response.data, filenameFromHeaders(response.headers, "voice2pdf-transcript.pdf"));
+
+      const url = `${API_URL}${response.data.pdf_url}`;
+      setPdfUrl(url);
+      setOriginalText(response.data.original_text || "");
+      setTranslatedText(response.data.translated_text || "");
+
+      await downloadFromUrl(url, `${filename || "voice2pdf"}.pdf`);
       setMessage("PDF generated and downloaded.");
     } catch (error) {
-      setMessage(error.response?.data?.detail || "Conversion failed.");
+      setMessage(error.response?.data?.detail || error.message || "Conversion failed.");
     } finally {
       setBusy(false);
     }
@@ -72,6 +81,23 @@ export function AudioToPdf() {
       <GlowButton onClick={convert} disabled={busy}>
         {busy ? "Converting..." : "Convert to PDF"}
       </GlowButton>
+      {pdfUrl ? (
+        <p className="status-line">
+          PDF ready: <a href={pdfUrl} target="_blank" rel="noreferrer">Download PDF</a>
+        </p>
+      ) : null}
+      {originalText ? (
+        <div className="result-card">
+          <strong>Original Transcript</strong>
+          <pre>{originalText}</pre>
+        </div>
+      ) : null}
+      {translatedText ? (
+        <div className="result-card">
+          <strong>Translated Transcript</strong>
+          <pre>{translatedText}</pre>
+        </div>
+      ) : null}
       {message ? <p className="status-line">{message}</p> : null}
     </div>
   );

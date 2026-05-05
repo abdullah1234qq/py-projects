@@ -6,6 +6,7 @@ import { usePersistentState } from "./hooks/usePersistentState.js";
 import { AudioToPdf } from "./pages/AudioToPdf.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { PdfToAudio } from "./pages/PdfToAudio.jsx";
+import { PdfAllAudio } from "./pages/PdfAllAudio.jsx";
 import { Realtime } from "./pages/Realtime.jsx";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
     dashboard: <Dashboard setCurrentPage={setCurrentPage} username={username} />,
     "audio-pdf": <AudioToPdf />,
     "pdf-audio": <PdfToAudio />,
+    "pdf-all-audio": <PdfAllAudio />,
     realtime: <Realtime />
   };
 

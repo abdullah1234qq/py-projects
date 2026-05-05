@@ -34,9 +34,9 @@ export function PdfToAudioScreen() {
     try {
       const path = await uploadAndSave("/pdf-to-audio", file, "voice2pdf-audio.mp3", { language });
       setAudioPath(path);
-      setMessage(`Saved to ${path}`);
+      setMessage(`✓ Saved to ${path}`);
     } catch (error) {
-      setMessage(error.message || "Conversion failed.");
+      setMessage(`✗ ${error.message}`);
     } finally {
       setBusy(false);
     }
@@ -50,9 +50,9 @@ export function PdfToAudioScreen() {
     setZipBusy(true);
     try {
       const path = await uploadAndSave("/pdf-to-all-audio", file, "voice2pdf-all-audio.zip");
-      setMessage(`Saved to ${path}`);
+      setMessage(`✓ Saved to ${path}`);
     } catch (error) {
-      setMessage(error.message || "ZIP generation failed.");
+      setMessage(`✗ ${error.message}`);
     } finally {
       setZipBusy(false);
     }

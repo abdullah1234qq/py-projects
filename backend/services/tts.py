@@ -8,7 +8,18 @@ import wave
 import zipfile
 from pathlib import Path
 
-from backend.config import TTS_DIR, TTS_TIMEOUT_SECONDS, VOICE_MAP, language_code
+from ..config import TTS_DIR, TTS_TIMEOUT_SECONDS, VOICE_MAP, language_code
+
+
+def run_async(coro):
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return asyncio.create_task(coro)
+        else:
+            return asyncio.run(coro)
+    except:
+        return asyncio.run(coro)
 
 
 async def synthesize_speech(text: str, language: str = "en") -> Path:
@@ -22,13 +33,13 @@ async def synthesize_all_languages(text: str) -> Path:
 def text_to_audio(text: str, lang: str) -> str | None:
     if not text.strip():
         return None
-    return str(asyncio.run(synthesize_speech(text, lang)))
+    return str(run_async(synthesize_speech(text, lang)))
 
 
 def text_to_all_audio(text: str) -> str | None:
     if not text.strip():
         return None
-    return str(asyncio.run(synthesize_all_languages(text)))
+    return str(run_async(synthesize_all_languages(text)))
 
 
 async def _synthesize_speech_async(text: str, language: str) -> Path:

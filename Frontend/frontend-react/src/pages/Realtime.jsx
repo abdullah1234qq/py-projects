@@ -1,52 +1,149 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { API_URL, api, downloadFromUrl } from "../api/client";
 import { GlowButton } from "../components/GlowButton.jsx";
-import { LiveTranscriptViewer } from "../components/LiveTranscriptViewer.jsx";
 import { NeonHeroMark } from "../components/NeonHeroMark.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
-import { useRealtimeTranscription } from "../hooks/useRealtimeTranscription.js";
-
-function formatTime(totalSeconds) {
-  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${minutes}:${seconds}`;
-}
 
 export function Realtime() {
-  const [language, setLanguage] = useState("en");
-  const realtime = useRealtimeTranscription(language);
+  const [language, setLanguage] = useState("English");
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const [recordingError, setRecordingError] = useState("");
+  const [originalText, setOriginalText] = useState("");
+  const [translatedText, setTranslatedText] = useState("");
+  const [audioUrl, setAudioUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      mediaRecorderRef.current?.stop();
+    };
+  }, []);
+
+  async function startRecording() {
+    setRecordingError("");
+    setMessage("");
+    setOriginalText("");
+    setTranslatedText("");
+    setAudioUrl("");
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const chunks = [];
+
+      recorder.addEventListener("dataavailable", (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      });
+
+      recorder.addEventListener("stop", () => {
+        setAudioChunks(chunks);
+      });
+
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+    } catch (error) {
+      setRecordingError("Unable to access microphone.");
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsRecording(false);
+  }
+
+  async function translateSpeech() {
+    if (!audioChunks.length) {
+      setMessage("Record audio before translating.");
+      return;
+    }
+    setLoading(true);
+    setMessage("");
+    try {
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const formData = new FormData();
+      formData.append("file", blob, "realtime.webm");
+      formData.append("language", language);
+
+      const response = await api.post("/realtime", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      const url = `${API_URL}${response.data.audio_url}`;
+      setAudioUrl(url);
+      setOriginalText(response.data.original_text || "");
+      setTranslatedText(response.data.translated_text || "");
+      setMessage("Realtime translation complete.");
+      await downloadFromUrl(url, "realtime-translation.mp3");
+    } catch (error) {
+      setMessage(error.response?.data?.detail || error.message || "Realtime conversion failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div className="stream-page">
-      <PageHeader title="Stream Audio to PDF" copy="Speak in real time and save the transcript." />
+    <div className="work-page">
+      <PageHeader title="Realtime Speech" copy="Record live speech, translate it, and download the audio." />
       <NeonHeroMark mode="mic" tone="green" />
-      <h2><span>Speak.</span> We&apos;ll write.</h2>
-      <div className="listening-bar">
-        <span className={realtime.isListening ? "live-dot active" : "live-dot"} />
-        <strong>{realtime.isListening ? "Listening..." : "Ready"}</strong>
-        <span>{formatTime(realtime.elapsed)}</span>
+      <div className="form-grid one">
+        <label>
+          <span>Target Language</span>
+          <select value={language} onChange={(event) => setLanguage(event.target.value)}>
+            <option>English</option>
+            <option>Urdu</option>
+            <option>Hindi</option>
+            <option>French</option>
+            <option>Spanish</option>
+            <option>German</option>
+            <option>Arabic</option>
+          </select>
+        </label>
       </div>
-      <div className="stream-wave" aria-hidden="true">
-        {Array.from({ length: 54 }).map((_, index) => (
-          <span key={index} style={{ "--level": `${22 + ((index * 23) % 62)}%` }} />
-        ))}
-      </div>
-      <div className="stream-controls">
-        <select value={language} onChange={(event) => setLanguage(event.target.value)}>
-          <option value="en">EN</option>
-          <option value="ur">UR</option>
-          <option value="ar">AR</option>
-          <option value="fr">FR</option>
-          <option value="de">DE</option>
-          <option value="es">ES</option>
-        </select>
-        <GlowButton tone="green" className="round-control" onClick={realtime.isListening ? realtime.stop : realtime.start}>
-          {realtime.isListening ? "Pause" : "Start"}
+      <div className="record-controls">
+        <GlowButton tone={isRecording ? "red" : "green"} onClick={isRecording ? stopRecording : startRecording}>
+          {isRecording ? "Stop Recording" : "Start Recording"}
         </GlowButton>
-        <button className="save-button" onClick={realtime.savePdf}>Save PDF</button>
+        <GlowButton onClick={translateSpeech} disabled={isRecording || loading}>
+          {loading ? "Translating..." : "Translate Audio"}
+        </GlowButton>
       </div>
-      <LiveTranscriptViewer transcript={realtime.transcript} />
-      {realtime.error ? <p className="status-line error">{realtime.error}</p> : null}
+      {audioUrl ? (
+        <div className="audio-preview">
+          <audio controls src={audioUrl} />
+        </div>
+      ) : null}
+      {originalText ? (
+        <div className="result-card">
+          <strong>Recognized Text</strong>
+          <pre>{originalText}</pre>
+        </div>
+      ) : null}
+      {translatedText ? (
+        <div className="result-card">
+          <strong>Translated Text</strong>
+          <pre>{translatedText}</pre>
+        </div>
+      ) : null}
+      {recordingError ? <p className="status-line error">{recordingError}</p> : null}
+      {message ? <p className="status-line">{message}</p> : null}
     </div>
   );
 }

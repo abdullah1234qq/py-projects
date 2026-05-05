@@ -32,36 +32,52 @@ export function useRealtimeStream(language = "en") {
     setSegments([]);
     configureAudio();
 
-    const socket = new WebSocket(`${WS_URL}/api/ws/audio`);
-    socketRef.current = socket;
+    try {
+      const socket = new WebSocket(`${WS_URL}/ws/audio`);
+      socketRef.current = socket;
 
-    socket.onopen = () => {
-      socket.send(JSON.stringify({ type: "config", language, mimeType: "audio/l16;rate=16000" }));
-      AudioRecord.on("data", (data) => {
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ type: "audio", encoding: "base64", audio: data, mimeType: "audio/l16;rate=16000" }));
+      socket.onopen = () => {
+        try {
+          socket.send(JSON.stringify({ type: "config", language, mimeType: "audio/l16;rate=16000" }));
+          AudioRecord.on("data", (data) => {
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({ type: "audio", encoding: "base64", audio: data, mimeType: "audio/l16;rate=16000" }));
+            }
+          });
+          AudioRecord.start();
+          startedAtRef.current = Date.now();
+          timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000)), 1000);
+          setListening(true);
+        } catch (err) {
+          setMessage(`✗ Failed to start audio: ${err.message}`);
         }
-      });
-      AudioRecord.start();
-      startedAtRef.current = Date.now();
-      timerRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000)), 1000);
-      setListening(true);
-    };
+      };
 
-    socket.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
-      if (payload.type === "transcript") {
-        setSegments((current) => {
-          const next = current.filter((segment) => segment.sequence !== payload.sequence);
-          return [...next, { sequence: payload.sequence, text: payload.text }].sort((a, b) => a.sequence - b.sequence);
-        });
-      }
-    };
+      socket.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === "transcript") {
+            setSegments((current) => {
+              const next = current.filter((segment) => segment.sequence !== payload.sequence);
+              return [...next, { sequence: payload.sequence, text: payload.text }].sort((a, b) => a.sequence - b.sequence);
+            });
+          }
+        } catch (err) {
+          console.error("Error parsing message:", err);
+        }
+      };
 
-    socket.onerror = () => {
-      setMessage("Streaming connection failed.");
-      setListening(false);
-    };
+      socket.onerror = (event) => {
+        setMessage(`✗ WebSocket error: ${event.message || "Connection lost"}`);
+        setListening(false);
+      };
+
+      socket.onclose = () => {
+        setListening(false);
+      };
+    } catch (err) {
+      setMessage(`✗ Failed to connect: ${err.message}`);
+    }
   }
 
   async function stop() {
@@ -78,8 +94,12 @@ export function useRealtimeStream(language = "en") {
   }
 
   async function savePdf() {
-    const path = await textToPdfAndSave(transcript);
-    setMessage(`Saved to ${path}`);
+    try {
+      const path = await textToPdfAndSave(transcript);
+      setMessage(`✓ Saved to ${path}`);
+    } catch (error) {
+      setMessage(`✗ ${error.message}`);
+    }
   }
 
   return { elapsed, listening, message, savePdf, start, stop, transcript };

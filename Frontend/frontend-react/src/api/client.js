@@ -25,6 +25,15 @@ export function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+export async function downloadFromUrl(url, fallbackName) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Download failed");
+  }
+  const blob = await response.blob();
+  downloadBlob(blob, fallbackName);
+}
+
 export function filenameFromHeaders(headers, fallback) {
   const disposition = headers["content-disposition"];
   const match = disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);

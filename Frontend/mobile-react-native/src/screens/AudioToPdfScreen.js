@@ -34,9 +34,9 @@ export function AudioToPdfScreen() {
         language,
         filename: filename || "voice2pdf"
       });
-      setMessage(`Saved to ${path}`);
+      setMessage(`✓ Saved to ${path}`);
     } catch (error) {
-      setMessage(error.message || "Conversion failed.");
+      setMessage(`✗ ${error.message}`);
     } finally {
       setBusy(false);
     }

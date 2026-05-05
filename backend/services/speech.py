@@ -10,7 +10,7 @@ import wave
 from dataclasses import dataclass
 from pathlib import Path
 
-from backend.config import CHUNK_DIR
+from ..config import CHUNK_DIR
 
 
 @dataclass(slots=True)
@@ -26,12 +26,14 @@ class SpeechService:
     _model = None
     _model_error: Exception | None = None
     _lock = threading.Lock()
+    MAX_DURATION_SECONDS = 300  # 5 minutes, chunk longer files
 
     def __init__(self, model_name: str | None = None, allow_dev_fallback: bool = True) -> None:
         self.model_name = model_name or os.getenv("WHISPER_MODEL", "tiny")
         self.allow_dev_fallback = allow_dev_fallback
 
-    async def transcribe_file(self, path: Path, language: str | None = None) -> TranscriptResult:
+    async def transcribe_file(self, path: Path, language: str | None = None, progress_callback: callable = None) -> TranscriptResult:
+        return await asyncio.to_thread(self._transcribe_file_sync, path, language, progress_callback)
         return await asyncio.to_thread(self._transcribe_file_sync, path, language)
 
     async def transcribe_bytes(
@@ -81,7 +83,16 @@ class SpeechService:
             chunk_path.write_bytes(audio)
         return self._transcribe_file_sync(chunk_path, language=language)
 
-    def _transcribe_file_sync(self, path: Path, language: str | None = None) -> TranscriptResult:
+    def _transcribe_file_sync(self, path: Path, language: str | None = None, progress_callback: callable = None) -> TranscriptResult:
+        # Check duration, if long, convert to WAV and chunk
+        duration = self._get_audio_duration(path)
+        if duration > self.MAX_DURATION_SECONDS:
+            return self._transcribe_long_audio(path, language, progress_callback)
+        # Check duration, if long, convert to WAV and chunk
+        duration = self._get_audio_duration(path)
+        if duration > self.MAX_DURATION_SECONDS:
+            return self._transcribe_long_audio(path, language)
+        
         try:
             model = self._get_model()
             kwargs = {"fp16": False}
@@ -130,6 +141,126 @@ class SpeechService:
         )
         return np.frombuffer(process.stdout, np.float32)
 
+    def _get_audio_duration(self, path: Path) -> float:
+        try:
+            import wave
+            with wave.open(str(path), "rb") as wav_file:
+                frames = wav_file.getnframes()
+                frame_rate = wav_file.getframerate()
+                if frame_rate <= 0:
+                    return 0.0
+                return frames / float(frame_rate)
+        except:
+            # For non-WAV files, use ffprobe
+            try:
+                result = subprocess.run(
+                    ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", str(path)],
+                    capture_output=True, text=True
+                )
+                import json
+                data = json.loads(result.stdout)
+                return float(data.get("format", {}).get("duration", 0))
+            except:
+                return 0.0
+
+    def _transcribe_long_audio(self, path: Path, language: str | None, progress_callback: callable = None) -> TranscriptResult:
+        # Convert to WAV if needed
+        wav_path = self._convert_to_wav(path)
+        if not wav_path:
+            # Fallback to direct transcription
+            return self._transcribe_file_sync(path, language)
+        
+        # Split into chunks
+        chunks = self._split_audio_into_chunks(wav_path)
+        if not chunks:
+            return self._transcribe_file_sync(wav_path, language)
+        
+        # Transcribe chunks
+        transcript_parts = []
+        detected_language = None
+        total_chunks = len(chunks)
+        for i, chunk in enumerate(chunks):
+            try:
+                result = self._transcribe_file_sync(chunk, language)
+                if result.text:
+                    transcript_parts.append(result.text)
+                if not detected_language and result.language:
+                    detected_language = result.language
+                if progress_callback:
+                    progress = int(((i + 1) / total_chunks) * 40) + 5  # 5-45% for transcription
+                    progress_callback(progress)
+            except:
+                continue
+        
+        # Cleanup
+        self._cleanup_chunks(chunks)
+        if wav_path != path:
+            try:
+                wav_path.unlink(missing_ok=True)
+            except:
+                pass
+        
+        merged_text = clean_text(" ".join(transcript_parts)).strip()
+        return TranscriptResult(text=merged_text, language=detected_language)
+
+    def _convert_to_wav(self, path: Path) -> Path | None:
+        if path.suffix.lower() == ".wav":
+            return path
+        try:
+            output_path = CHUNK_DIR / f"{uuid.uuid4().hex}.wav"
+            CHUNK_DIR.mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", str(path), 
+                    "-ac", "1", "-ar", "16000", "-f", "wav", str(output_path)
+                ],
+                check=True, capture_output=True
+            )
+            return output_path
+        except:
+            return None
+
+    def _split_audio_into_chunks(self, wav_path: Path) -> list[Path]:
+        chunks = []
+        chunk_length_sec = 60  # 60 seconds chunks
+        try:
+            from pydub import AudioSegment
+            audio = AudioSegment.from_wav(str(wav_path))
+            duration_ms = len(audio)
+            chunk_length_ms = chunk_length_sec * 1000
+            
+            for start_ms in range(0, duration_ms, chunk_length_ms):
+                end_ms = min(start_ms + chunk_length_ms, duration_ms)
+                chunk = audio[start_ms:end_ms]
+                chunk_path = CHUNK_DIR / f"chunk-{uuid.uuid4().hex}.wav"
+                chunk.export(str(chunk_path), format="wav")
+                chunks.append(chunk_path)
+        except ImportError:
+            # Fallback to ffmpeg
+            duration = self._get_audio_duration(wav_path)
+            for start_sec in range(0, int(duration), chunk_length_sec):
+                end_sec = min(start_sec + chunk_length_sec, duration)
+                chunk_path = CHUNK_DIR / f"chunk-{uuid.uuid4().hex}.wav"
+                subprocess.run(
+                    [
+                        "ffmpeg", "-y", "-i", str(wav_path),
+                        "-ss", str(start_sec), "-t", str(end_sec - start_sec),
+                        "-ac", "1", "-ar", "16000", str(chunk_path)
+                    ],
+                    check=True, capture_output=True
+                )
+                chunks.append(chunk_path)
+        except:
+            pass
+        return chunks
+
+    def _cleanup_chunks(self, chunks: list[Path]) -> None:
+        for chunk in chunks:
+            try:
+                chunk.unlink(missing_ok=True)
+            except:
+                pass
+
     def _write_pcm_as_wav(self, path: Path, audio: bytes) -> None:
         with wave.open(str(path), "wb") as wav_file:
             wav_file.setnchannels(1)
@@ -145,7 +276,6 @@ class SpeechService:
                 raise self.__class__._model_error
             try:
                 import whisper
-
                 self.__class__._model = whisper.load_model(self.model_name)
                 return self.__class__._model
             except Exception as exc:

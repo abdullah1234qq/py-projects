@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket
 
-from backend.websocket.streaming import RealtimeTranscriber
+from .streaming import RealtimeTranscriber
 
 router = APIRouter(tags=["websocket"])
 

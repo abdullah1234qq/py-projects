@@ -4,6 +4,7 @@ const navItems = [
   { id: "dashboard", label: "Home", icon: DocumentWaveIcon },
   { id: "audio-pdf", label: "Audio PDF", icon: DocumentWaveIcon },
   { id: "pdf-audio", label: "PDF Audio", icon: PdfIcon },
+  { id: "pdf-all-audio", label: "All Audio", icon: PdfIcon },
   { id: "realtime", label: "Realtime", icon: MicIcon }
 ];
 
