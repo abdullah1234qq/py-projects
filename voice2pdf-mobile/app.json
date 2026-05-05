@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Voice2PDF Mobile",
+    "slug": "voice2pdf-mobile",
+    "version": "1.0.0",
+    "sdkVersion": "49.0.0",
+    "platforms": ["ios", "android", "web"],
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#020617"
+      }
+    }
+  }
+}

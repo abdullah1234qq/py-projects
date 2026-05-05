@@ -5,10 +5,9 @@ reportlab>=4.2.0
 pypdf>=4.3.0
 deep-translator>=1.11.0
 edge-tts>=7.0.0
-gradio>=5.0.0
 numpy>=2.0.0
 pydub>=0.25.1
-ffmpeg-python>=0.2.1
+ffmpeg-python>=0.2.0
 # Audio/Speech Recognition
 # Note: openai-whisper may have compatibility issues with Python 3.14
 # Fallback options included in speech.py

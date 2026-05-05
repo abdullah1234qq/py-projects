@@ -1,76 +1,73 @@
-import React, { useState } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  Button,
-  StyleSheet,
-  ScrollView,
-} from "react-native";
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
-const App = () => {
-  const [result, setResult] = useState("");
+import { AudioToPdfScreen } from "./src/screens/AudioToPdfScreen";
+import { DashboardScreen } from "./src/screens/DashboardScreen";
+import { PdfToAudioScreen } from "./src/screens/PdfToAudioScreen";
+import { PdfAllAudioScreen } from "./src/screens/PdfAllAudioScreen";
+import { RealtimeScreen } from "./src/screens/RealtimeScreen";
 
-  const testBackend = async () => {
-    try {
-      const res = await fetch("http://10.0.2.2:7860/");
-      const text = await res.text();
-      setResult(text);
-    } catch (e) {
-      setResult("Backend not reachable");
-    }
-  };
+const Tab = createBottomTabNavigator();
 
+export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <Text style={styles.title}>🎤 Voice2PDF Mobile</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.section}>Audio → PDF</Text>
-          <Button title="Test Backend" onPress={testBackend} />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.section}>PDF → Audio</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.section}>Realtime Speech</Text>
-        </View>
-
-        <Text style={styles.result}>{result}</Text>
-      </ScrollView>
-    </SafeAreaView>
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={{
+          tabBarStyle: {
+            backgroundColor: "#0f172a",
+            borderTopColor: "#1e293b",
+          },
+          tabBarActiveTintColor: "#38bdf8",
+          tabBarInactiveTintColor: "#64748b",
+          headerStyle: {
+            backgroundColor: "#0f172a",
+          },
+          headerTintColor: "#fff",
+        }}
+      >
+        <Tab.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{
+            tabBarLabel: "Home",
+            tabBarIcon: () => null,
+          }}
+        />
+        <Tab.Screen
+          name="AudioToPdf"
+          component={AudioToPdfScreen}
+          options={{
+            tabBarLabel: "Audio → PDF",
+            tabBarIcon: () => null,
+          }}
+        />
+        <Tab.Screen
+          name="PdfToAudio"
+          component={PdfToAudioScreen}
+          options={{
+            tabBarLabel: "PDF → Audio",
+            tabBarIcon: () => null,
+          }}
+        />
+        <Tab.Screen
+          name="PdfAllAudio"
+          component={PdfAllAudioScreen}
+          options={{
+            tabBarLabel: "All Audio",
+            tabBarIcon: () => null,
+          }}
+        />
+        <Tab.Screen
+          name="Realtime"
+          component={RealtimeScreen}
+          options={{
+            tabBarLabel: "Realtime",
+            tabBarIcon: () => null,
+          }}
+        />
+      </Tab.Navigator>
+    </NavigationContainer>
   );
-};
-
-export default App;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0f172a",
-  },
-  title: {
-    fontSize: 24,
-    color: "#fff",
-    textAlign: "center",
-    margin: 20,
-  },
-  card: {
-    backgroundColor: "#1e293b",
-    margin: 10,
-    padding: 15,
-    borderRadius: 10,
-  },
-  section: {
-    color: "#38bdf8",
-    fontSize: 18,
-    marginBottom: 10,
-  },
-  result: {
-    color: "#fff",
-    margin: 20,
-  },
-});
+}

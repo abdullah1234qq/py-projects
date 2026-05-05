@@ -1,0 +1,17 @@
+{
+  "name": "voice2pdf-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start"
+  },
+  "dependencies": {
+    "expo": "~49.0.0",
+    "react": "18.2.0",
+    "react-native": "0.72.9",
+    "axios": "^1.6.0",
+    "@react-navigation/native": "^6.1.7",
+    "@react-navigation/native-stack": "^6.9.12"
+  }
+}

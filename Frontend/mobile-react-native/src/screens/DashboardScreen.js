@@ -1,53 +1,61 @@
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
-import { NeonCard } from "../components/NeonCard";
 import { NeonMark } from "../components/NeonMark";
 import { theme } from "../theme";
 
-const actions = [
-  { id: "audio", title: "Audio to PDF", copy: "Convert audio files into PDF documents.", tone: "blue", badge: "PDF" },
-  { id: "pdf", title: "PDF to Audio", copy: "Convert documents into natural audio.", tone: "green", badge: "TTS" },
-  { id: "stream", title: "Stream Audio to PDF", copy: "Speak in real time and save a PDF.", tone: "purple", badge: "MIC" }
-];
-
-export function DashboardScreen({ username, setScreen }) {
+export function DashboardScreen() {
   return (
-    <View>
+    <View style={styles.container}>
       <View style={styles.hero}>
         <NeonMark />
         <Text style={styles.logo}>Voice<Text style={styles.logoGreen}>2</Text>PDF</Text>
         <Text style={styles.tagline}>Your Voice. Your PDF. Your Way.</Text>
       </View>
-      <Text style={styles.heading}>Hello, {username || "Student"}</Text>
-      <Text style={styles.subheading}>Choose an Action</Text>
-      <View style={styles.list}>
-        {actions.map((action) => (
-          <NeonCard key={action.id} tone={action.tone}>
-            <Pressable style={styles.action} onPress={() => setScreen(action.id)}>
-              <View style={[styles.badge, styles[action.tone]]}>
-                <Text style={styles.badgeText}>{action.badge}</Text>
-              </View>
-              <View style={styles.actionText}>
-                <Text style={styles.actionTitle}>{action.title}</Text>
-                <Text style={styles.actionCopy}>{action.copy}</Text>
-              </View>
-              <Text style={styles.chevron}>Next</Text>
-            </Pressable>
-          </NeonCard>
-        ))}
-      </View>
+      <Text style={styles.welcome}>Welcome to Voice2PDF Mobile</Text>
+      <Text style={styles.description}>
+        Use the tabs below to convert audio to PDF, PDF to audio, generate multi-language audio, or use real-time speech translation.
+      </Text>
     </View>
   );
 }
 
 const styles = {
+  container: {
+    flex: 1,
+    padding: theme.spacing.lg,
+  },
   hero: {
     alignItems: "center",
-    marginBottom: theme.spacing.lg
+    marginBottom: theme.spacing.xl
   },
   logo: {
     color: theme.colors.text,
+    fontSize: 32,
+    fontWeight: "bold"
+  },
+  logoGreen: {
+    color: theme.colors.green
+  },
+  tagline: {
+    color: theme.colors.muted,
+    fontSize: 16,
+    marginTop: theme.spacing.sm
+  },
+  welcome: {
+    color: theme.colors.text,
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: theme.spacing.md
+  },
+  description: {
+    color: theme.colors.muted,
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 24
+  }
+};
     fontSize: 38,
     fontWeight: "900"
   },

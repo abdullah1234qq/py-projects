@@ -15,7 +15,6 @@ export function PdfToAudioScreen() {
   const [audioPath, setAudioPath] = useState("");
   const [language, setLanguage] = useState("English");
   const [busy, setBusy] = useState(false);
-  const [zipBusy, setZipBusy] = useState(false);
   const [message, setMessage] = useState("");
 
   async function pickPdf() {
@@ -42,22 +41,6 @@ export function PdfToAudioScreen() {
     }
   }
 
-  async function convertAll() {
-    if (!file) {
-      setMessage("Choose a PDF first.");
-      return;
-    }
-    setZipBusy(true);
-    try {
-      const path = await uploadAndSave("/pdf-to-all-audio", file, "voice2pdf-all-audio.zip");
-      setMessage(`✓ Saved to ${path}`);
-    } catch (error) {
-      setMessage(`✗ ${error.message}`);
-    } finally {
-      setZipBusy(false);
-    }
-  }
-
   return (
     <View>
       <ScreenHeader title="PDF to Audio" copy="Convert a PDF document into natural-sounding audio." />
@@ -76,9 +59,6 @@ export function PdfToAudioScreen() {
         {audioPath ? <AudioPlayer name="Generated audio" detail={audioPath} /> : null}
       </NeonCard>
       <GlowButton tone="green" label={busy ? "Generating..." : "Generate Audio"} onPress={convert} disabled={busy} />
-      <View style={styles.secondary}>
-        <GlowButton label={zipBusy ? "Building ZIP..." : "All Languages"} onPress={convertAll} disabled={zipBusy} />
-      </View>
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
