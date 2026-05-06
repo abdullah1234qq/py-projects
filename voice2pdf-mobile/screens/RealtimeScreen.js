@@ -3,10 +3,11 @@ import { ScrollView, View, Text, Button, Alert, StyleSheet, ActivityIndicator, T
 import { Audio } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
 import { realtimeAPI, BASE_URL, handleApiError } from "../services/api";
+import { logError } from "../utils/logger";
 
 const LANGUAGE_OPTIONS = ["English", "Urdu", "Hindi", "French", "Spanish", "German", "Arabic"];
 
-export default function RealtimeScreen() {
+export default function RealtimeScreen({ navigation }) {
   const [recording, setRecording] = useState(null);
   const [statusText, setStatusText] = useState("Ready to record");
   const [audioUrl, setAudioUrl] = useState("");
@@ -38,6 +39,7 @@ export default function RealtimeScreen() {
       setRecording(recordingObject);
       setStatusText("Recording...");
     } catch (error) {
+      await logError(error, "Realtime - Start Recording");
       Alert.alert("Recording failed", error.message || "Unable to start recording");
     }
   };
@@ -60,6 +62,7 @@ export default function RealtimeScreen() {
       };
       await sendRecording(file);
     } catch (error) {
+      await logError(error, "Realtime - Stop Recording");
       Alert.alert("Stop failed", error.message || "Unable to stop recording");
     }
   };
@@ -76,7 +79,8 @@ export default function RealtimeScreen() {
       setAudioUrl(data.audio_url ? `${BASE_URL}${data.audio_url}` : "");
       Alert.alert("Realtime result", "Transcription and audio are ready.");
     } catch (error) {
-      Alert.alert("Realtime failed", handleApiError(error));
+      await logError(error, "Realtime - Send Recording");
+      Alert.alert("Realtime failed", error.message || "Unable to process realtime request");
     } finally {
       setLoading(false);
     }
@@ -95,6 +99,7 @@ export default function RealtimeScreen() {
       soundRef.current = sound;
       await sound.playAsync();
     } catch (error) {
+      await logError(error, "Realtime - Playback");
       Alert.alert("Playback failed", error.message || "Unable to play audio");
     }
   };
@@ -107,6 +112,7 @@ export default function RealtimeScreen() {
         await sendRecording(result);
       }
     } catch (error) {
+      await logError(error, "Realtime - File Selection");
       Alert.alert("File selection failed", error.message || "Unable to select file");
     }
   };
@@ -153,6 +159,11 @@ export default function RealtimeScreen() {
           <Button title="Play Result Audio" onPress={playAudio} color="#22c55e" />
         </View>
       ) : null}
+      <View style={styles.debugButtonWrapper}>
+        <TouchableOpacity style={styles.debugButton} onPress={() => navigation.navigate("Debug")}>
+          <Text style={styles.debugButtonText}>🐛 View Logs</Text>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.note}>Backend: {BASE_URL}</Text>
     </ScrollView>
   );
@@ -221,6 +232,21 @@ const styles = StyleSheet.create({
   },
   playButton: {
     marginTop: 20,
+  },
+  debugButtonWrapper: {
+    marginTop: 20,
+  },
+  debugButton: {
+    backgroundColor: "#6f42c1",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  debugButtonText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 14,
   },
   note: {
     color: "#94a3b8",

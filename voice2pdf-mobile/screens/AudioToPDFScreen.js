@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { ScrollView, View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet, TouchableOpacity, Linking } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { audioToPDF, BASE_URL, handleApiError } from "../services/api";
+import { logError, logFileOperation, logInfo } from "../utils/logger";
 
 const LANGUAGE_OPTIONS = ["English", "Urdu", "Hindi", "French", "Spanish", "German", "Arabic"];
 
-export default function AudioToPDFScreen() {
+export default function AudioToPDFScreen({ navigation }) {
   const [file, setFile] = useState(null);
   const [filename, setFilename] = useState("voice2pdf");
   const [language, setLanguage] = useState("English");
@@ -16,14 +17,25 @@ export default function AudioToPDFScreen() {
 
   const pickFile = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: [DocumentPicker.types.audio, DocumentPicker.types.video], copyToCacheDirectory: true });
+      await logInfo('Starting file selection for audio/video', 'AudioToPDF - File Selection');
+
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [DocumentPicker.types.audio, DocumentPicker.types.video],
+        copyToCacheDirectory: true
+      });
+
       if (result.type === "success") {
+        await logFileOperation('File Selected', result.name, true, `Size: ${result.size} bytes`, 'AudioToPDF - File Selection');
         setFile(result);
         setOriginalText("");
         setTranslatedText("");
         setPdfUrl("");
+        await logInfo(`File selected successfully: ${result.name}`, 'AudioToPDF - File Selection');
+      } else {
+        await logInfo('File selection cancelled by user', 'AudioToPDF - File Selection');
       }
     } catch (error) {
+      await logError(error, "AudioToPDF - File Selection");
       Alert.alert("File selection failed", error.message || "Unable to select file");
     }
   };
@@ -46,7 +58,8 @@ export default function AudioToPDFScreen() {
       setPdfUrl(data.pdf_url ? `${BASE_URL}${data.pdf_url}` : "");
       Alert.alert("PDF Created", "Your PDF is ready.");
     } catch (error) {
-      Alert.alert("Conversion failed", handleApiError(error));
+      await logError(error, "AudioToPDF - Conversion");
+      Alert.alert("Conversion failed", error.message || "Unable to convert audio to PDF");
     } finally {
       setLoading(false);
     }
@@ -54,9 +67,13 @@ export default function AudioToPDFScreen() {
 
   const openPdf = async () => {
     if (!pdfUrl) return;
+
     try {
+      await logInfo(`Opening PDF: ${pdfUrl}`, 'AudioToPDF - PDF Open');
       await Linking.openURL(pdfUrl);
+      await logInfo('PDF opened successfully', 'AudioToPDF - PDF Open');
     } catch (error) {
+      await logError(error, "AudioToPDF - Open PDF");
       Alert.alert("Cannot open PDF", error.message || "Unable to open PDF file");
     }
   };
@@ -105,6 +122,11 @@ export default function AudioToPDFScreen() {
           <Text style={styles.resultText}>{translatedText}</Text>
         </View>
       ) : null}
+      <View style={styles.debugButtonWrapper}>
+        <TouchableOpacity style={styles.debugButton} onPress={() => navigation.navigate("Debug")}>
+          <Text style={styles.debugButtonText}>🐛 View Logs</Text>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.note}>Backend: {BASE_URL}</Text>
     </ScrollView>
   );
@@ -178,6 +200,21 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#7dd3fc",
     textDecorationLine: "underline",
+  },
+  debugButtonWrapper: {
+    marginTop: 20,
+  },
+  debugButton: {
+    backgroundColor: "#6f42c1",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  debugButtonText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 14,
   },
   note: {
     color: "#94a3b8",

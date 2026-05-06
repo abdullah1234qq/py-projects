@@ -3,10 +3,11 @@ import { ScrollView, View, Text, Button, Alert, StyleSheet, ActivityIndicator, T
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { pdfToAudio, BASE_URL, handleApiError } from "../services/api";
+import { logError } from "../utils/logger";
 
 const LANGUAGE_OPTIONS = ["English", "Urdu", "Hindi", "French", "Spanish", "German", "Arabic"];
 
-export default function PDFToAudioScreen() {
+export default function PDFToAudioScreen({ navigation }) {
   const [file, setFile] = useState(null);
   const [audioUrl, setAudioUrl] = useState("");
   const [language, setLanguage] = useState("English");
@@ -29,6 +30,7 @@ export default function PDFToAudioScreen() {
         setAudioUrl("");
       }
     } catch (error) {
+      await logError(error, "PDFToAudio - File Selection");
       Alert.alert("File selection failed", error.message || "Unable to select file");
     }
   };
@@ -45,7 +47,8 @@ export default function PDFToAudioScreen() {
       setAudioUrl(url);
       Alert.alert("Audio generated", "Your audio is ready to play.");
     } catch (error) {
-      Alert.alert("Conversion failed", handleApiError(error));
+      await logError(error, "PDFToAudio - Conversion");
+      Alert.alert("Conversion failed", error.message || "Unable to convert PDF to audio");
     } finally {
       setLoading(false);
     }
@@ -64,6 +67,7 @@ export default function PDFToAudioScreen() {
       setSound(newSound);
       await newSound.playAsync();
     } catch (error) {
+      await logError(error, "PDFToAudio - Playback");
       Alert.alert("Playback error", error.message || "Unable to play audio");
     }
   };
@@ -73,6 +77,7 @@ export default function PDFToAudioScreen() {
     try {
       await Linking.openURL(audioUrl);
     } catch (error) {
+      await logError(error, "PDFToAudio - Open Audio");
       Alert.alert("Cannot open audio", error.message || "Unable to open audio URL");
     }
   };
@@ -105,6 +110,11 @@ export default function PDFToAudioScreen() {
           </View>
         </View>
       ) : null}
+      <View style={styles.debugButtonWrapper}>
+        <TouchableOpacity style={styles.debugButton} onPress={() => navigation.navigate("Debug")}>
+          <Text style={styles.debugButtonText}>🐛 View Logs</Text>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.note}>Backend: {BASE_URL}</Text>
     </ScrollView>
   );
@@ -173,6 +183,21 @@ const styles = StyleSheet.create({
   playButton: {
     alignSelf: "flex-start",
     marginTop: 16,
+  },
+  debugButtonWrapper: {
+    marginTop: 20,
+  },
+  debugButton: {
+    backgroundColor: "#6f42c1",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  debugButtonText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 14,
   },
   note: {
     color: "#94a3b8",

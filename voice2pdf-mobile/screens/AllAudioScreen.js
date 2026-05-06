@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { ScrollView, View, Text, Button, Alert, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { pdfToAllAudio, BASE_URL, handleApiError } from "../services/api";
+import { logError } from "../utils/logger";
 
-export default function AllAudioScreen() {
+export default function AllAudioScreen({ navigation }) {
   const [file, setFile] = useState(null);
   const [zipUrl, setZipUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,7 @@ export default function AllAudioScreen() {
         setZipUrl("");
       }
     } catch (error) {
+      await logError(error, "AllAudio - File Selection");
       Alert.alert("File selection failed", error.message || "Unable to select file");
     }
   };
@@ -32,7 +34,8 @@ export default function AllAudioScreen() {
       setZipUrl(url);
       Alert.alert("ZIP ready", "Your multi-language audio ZIP is available.");
     } catch (error) {
-      Alert.alert("Conversion failed", handleApiError(error));
+      await logError(error, "AllAudio - Conversion");
+      Alert.alert("Conversion failed", error.message || "Unable to convert PDF to all audio");
     } finally {
       setLoading(false);
     }
@@ -43,6 +46,7 @@ export default function AllAudioScreen() {
     try {
       await Linking.openURL(zipUrl);
     } catch (error) {
+      await logError(error, "AllAudio - Open ZIP");
       Alert.alert("Open failed", error.message || "Unable to open ZIP URL");
     }
   };
@@ -66,6 +70,11 @@ export default function AllAudioScreen() {
           </View>
         </View>
       ) : null}
+      <View style={styles.debugButtonWrapper}>
+        <TouchableOpacity style={styles.debugButton} onPress={() => navigation.navigate("Debug")}>
+          <Text style={styles.debugButtonText}>🐛 View Logs</Text>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.note}>Backend: {BASE_URL}</Text>
     </ScrollView>
   );
@@ -110,6 +119,21 @@ const styles = StyleSheet.create({
   },
   openButton: {
     alignSelf: "flex-start",
+  },
+  debugButtonWrapper: {
+    marginTop: 20,
+  },
+  debugButton: {
+    backgroundColor: "#6f42c1",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  debugButtonText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 14,
   },
   note: {
     color: "#94a3b8",
