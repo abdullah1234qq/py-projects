@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ScrollView, View, Text, Button, Alert, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { pdfToAllAudio, BASE_URL, handleApiError } from "../services/api";
-import { logError } from "../utils/logger";
+import { logError, logFileOperation, logInfo } from "../utils/logger";
 
 export default function AllAudioScreen({ navigation }) {
   const [file, setFile] = useState(null);
@@ -11,10 +11,16 @@ export default function AllAudioScreen({ navigation }) {
 
   const pickFile = async () => {
     try {
+      await logInfo('Starting file selection for PDF', 'AllAudio - File Selection');
+
       const result = await DocumentPicker.getDocumentAsync({ type: [DocumentPicker.types.pdf], copyToCacheDirectory: true });
       if (result.type === "success") {
+        await logFileOperation('File Selected', result.name, true, `Size: ${result.size} bytes`, 'AllAudio - File Selection');
         setFile(result);
         setZipUrl("");
+        await logInfo(`File selected successfully: ${result.name}`, 'AllAudio - File Selection');
+      } else {
+        await logInfo('File selection cancelled by user', 'AllAudio - File Selection');
       }
     } catch (error) {
       await logError(error, "AllAudio - File Selection");
@@ -44,7 +50,9 @@ export default function AllAudioScreen({ navigation }) {
   const openZip = async () => {
     if (!zipUrl) return;
     try {
+      await logInfo(`Opening ZIP: ${zipUrl}`, 'AllAudio - ZIP Open');
       await Linking.openURL(zipUrl);
+      await logInfo('ZIP opened successfully', 'AllAudio - ZIP Open');
     } catch (error) {
       await logError(error, "AllAudio - Open ZIP");
       Alert.alert("Open failed", error.message || "Unable to open ZIP URL");

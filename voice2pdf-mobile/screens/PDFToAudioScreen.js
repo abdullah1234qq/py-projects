@@ -3,7 +3,7 @@ import { ScrollView, View, Text, Button, Alert, StyleSheet, ActivityIndicator, T
 import * as DocumentPicker from "expo-document-picker";
 import { Audio } from "expo-av";
 import { pdfToAudio, BASE_URL, handleApiError } from "../services/api";
-import { logError } from "../utils/logger";
+import { logError, logFileOperation, logInfo } from "../utils/logger";
 
 const LANGUAGE_OPTIONS = ["English", "Urdu", "Hindi", "French", "Spanish", "German", "Arabic"];
 
@@ -24,10 +24,16 @@ export default function PDFToAudioScreen({ navigation }) {
 
   const pickFile = async () => {
     try {
+      await logInfo('Starting file selection for PDF', 'PDFToAudio - File Selection');
+
       const result = await DocumentPicker.getDocumentAsync({ type: [DocumentPicker.types.pdf], copyToCacheDirectory: true });
       if (result.type === "success") {
+        await logFileOperation('File Selected', result.name, true, `Size: ${result.size} bytes`, 'PDFToAudio - File Selection');
         setFile(result);
         setAudioUrl("");
+        await logInfo(`File selected successfully: ${result.name}`, 'PDFToAudio - File Selection');
+      } else {
+        await logInfo('File selection cancelled by user', 'PDFToAudio - File Selection');
       }
     } catch (error) {
       await logError(error, "PDFToAudio - File Selection");
@@ -75,7 +81,9 @@ export default function PDFToAudioScreen({ navigation }) {
   const openAudio = async () => {
     if (!audioUrl) return;
     try {
+      await logInfo(`Opening audio: ${audioUrl}`, 'PDFToAudio - Audio Open');
       await Linking.openURL(audioUrl);
+      await logInfo('Audio opened successfully', 'PDFToAudio - Audio Open');
     } catch (error) {
       await logError(error, "PDFToAudio - Open Audio");
       Alert.alert("Cannot open audio", error.message || "Unable to open audio URL");

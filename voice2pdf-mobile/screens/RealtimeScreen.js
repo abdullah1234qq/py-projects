@@ -3,7 +3,7 @@ import { ScrollView, View, Text, Button, Alert, StyleSheet, ActivityIndicator, T
 import { Audio } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
 import { realtimeAPI, BASE_URL, handleApiError } from "../services/api";
-import { logError } from "../utils/logger";
+import { logError, logFileOperation, logInfo } from "../utils/logger";
 
 const LANGUAGE_OPTIONS = ["English", "Urdu", "Hindi", "French", "Spanish", "German", "Arabic"];
 
@@ -106,10 +106,16 @@ export default function RealtimeScreen({ navigation }) {
 
   const pickRecordedFile = async () => {
     try {
+      await logInfo('Starting file selection for audio', 'Realtime - File Selection');
+
       const result = await DocumentPicker.getDocumentAsync({ type: [DocumentPicker.types.audio], copyToCacheDirectory: true });
       if (result.type === "success") {
+        await logFileOperation('File Selected', result.name, true, `Size: ${result.size} bytes`, 'Realtime - File Selection');
         setStatusText("File selected for realtime");
+        await logInfo(`File selected successfully: ${result.name}`, 'Realtime - File Selection');
         await sendRecording(result);
+      } else {
+        await logInfo('File selection cancelled by user', 'Realtime - File Selection');
       }
     } catch (error) {
       await logError(error, "Realtime - File Selection");
