@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { API_URL, api, downloadFromUrl } from "../api/client";
+import { downloadFromUrl } from "../api/client";
 import { AudioPlayer } from "../components/AudioPlayer.jsx";
 import { FileUploader } from "../components/FileUploader.jsx";
 import { GlowButton } from "../components/GlowButton.jsx";
@@ -14,6 +14,7 @@ export function AudioToPdf() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [originalText, setOriginalText] = useState("");
+  const BASE_URL = "http://127.0.0.1:8000";
   const [translatedText, setTranslatedText] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
   const audioUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
@@ -31,19 +32,28 @@ export function AudioToPdf() {
       formData.append("language", language);
       formData.append("filename", filename || "voice2pdf");
 
-      const response = await api.post("/audio-to-pdf", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+      const response = await fetch(`${BASE_URL}/audio-to-pdf`, {
+        method: "POST",
+        body: formData,
       });
 
-      const url = `${API_URL}${response.data.pdf_url}`;
+      console.log("API response status:", response.status);
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || data.message || "Backend returned an error");
+      }
+
+      const url = data.pdf_url?.startsWith("http") ? data.pdf_url : `${BASE_URL}${data.pdf_url}`;
       setPdfUrl(url);
-      setOriginalText(response.data.original_text || "");
-      setTranslatedText(response.data.translated_text || "");
+      setOriginalText(data.original_text || "");
+      setTranslatedText(data.translated_text || "");
 
       await downloadFromUrl(url, `${filename || "voice2pdf"}.pdf`);
       setMessage("PDF generated and downloaded.");
     } catch (error) {
-      setMessage(error.response?.data?.detail || error.message || "Conversion failed.");
+      console.error("API Error:", error);
+      setMessage(error.message || "Request failed");
     } finally {
       setBusy(false);
     }

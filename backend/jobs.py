@@ -7,11 +7,11 @@ import uuid
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from .config import AUDIO_DIR, PDF_DIR, language_code
-from .services.pdf import create_pdf_from_text
-from .services.speech import SpeechService
-from .services.storage import save_upload
-from .services.translation import translate_text
+from backend.config import AUDIO_DIR, PDF_DIR, language_code
+from backend.services.pdf import create_pdf_from_text
+from backend.services.speech import SpeechService
+from backend.services.storage import save_upload
+from backend.services.translation import translate_text
 
 # In-memory job storage (for production, use Redis/database)
 jobs: Dict[str, Dict[str, Any]] = {}

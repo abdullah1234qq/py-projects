@@ -8,7 +8,7 @@ import wave
 import zipfile
 from pathlib import Path
 
-from ..config import TTS_DIR, TTS_TIMEOUT_SECONDS, VOICE_MAP, language_code
+from backend.config import TTS_DIR, TTS_TIMEOUT_SECONDS, VOICE_MAP, language_code
 
 
 def run_async(coro):

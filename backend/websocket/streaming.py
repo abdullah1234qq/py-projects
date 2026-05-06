@@ -8,8 +8,8 @@ import uuid
 
 from fastapi import WebSocket
 
-from ..config import STREAM_FLUSH_SECONDS, STREAM_MIN_CHUNK_BYTES
-from ..services.speech import SpeechService
+from backend.config import STREAM_FLUSH_SECONDS, STREAM_MIN_CHUNK_BYTES
+from backend.services.speech import SpeechService
 
 
 class RealtimeTranscriber:

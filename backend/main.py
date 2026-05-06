@@ -2,10 +2,11 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from .config import ALLOWED_ORIGINS, ensure_storage_dirs
-from .routes.conversion import router as conversion_router
-from .websocket.transcription import router as websocket_router
+from backend.config import ensure_storage_dirs, PDF_DIR
+from backend.routes.conversion import router as conversion_router
+from backend.websocket.transcription import router as websocket_router
 
 
 ensure_storage_dirs()
@@ -18,7 +19,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS + ["*"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,13 +31,15 @@ app.include_router(conversion_router, prefix="/api")
 app.include_router(websocket_router)
 app.include_router(websocket_router, prefix="/api")
 
+app.mount("/api/files/pdf", StaticFiles(directory=str(PDF_DIR)), name="pdf")
+
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    return {"name": "Voice2PDF API", "status": "ready"}
+    return {"message": "Backend working"}
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=7860, reload=True)
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

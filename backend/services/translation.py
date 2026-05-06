@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 
-from ..config import TRANSLATION_TIMEOUT_SECONDS, language_code
+from backend.config import TRANSLATION_TIMEOUT_SECONDS, language_code
 
 
 async def translate_text(

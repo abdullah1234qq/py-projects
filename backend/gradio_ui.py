@@ -8,7 +8,7 @@ import uuid
 import wave
 from pathlib import Path
 
-from ..jobs import get_job, start_audio_to_pdf_job
+from backend.jobs import get_job, start_audio_to_pdf_job
 
 speech_service = SpeechService(model_name="tiny")
 TARGET_SAMPLE_RATE = 16_000

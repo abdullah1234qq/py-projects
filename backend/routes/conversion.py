@@ -7,8 +7,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from ..config import AUDIO_DIR, LANGUAGES, MAX_UPLOAD_BYTES, PDF_DIR, language_code
-from ..services import (
+from backend.config import AUDIO_DIR, LANGUAGES, MAX_UPLOAD_BYTES, PDF_DIR, language_code
+from backend.services import (
     create_pdf_from_text,
     extract_pdf_text,
     save_upload,
@@ -16,7 +16,7 @@ from ..services import (
     synthesize_speech,
     translate_text,
 )
-from ..services.speech import SpeechService
+from backend.services.speech import SpeechService
 
 router = APIRouter(tags=["conversion"])
 speech_service = SpeechService()
@@ -54,10 +54,17 @@ async def audio_to_pdf(
     pdf_path = PDF_DIR / f"{safe_name}-{uuid.uuid4().hex}.pdf"
     await create_pdf_from_text(translated_text, pdf_path, title="Voice2PDF Transcript")
 
+    if not pdf_path.exists():
+        raise HTTPException(status_code=500, detail="PDF was not created")
+
+    pdf_url = f"http://localhost:8000/api/files/pdf/{pdf_path.name}"
     return {
+        "text": original_text,
+        "translated": translated_text,
+        "pdf_file": pdf_url,
         "original_text": original_text,
         "translated_text": translated_text,
-        "pdf_url": _build_file_url("pdf", pdf_path),
+        "pdf_url": pdf_url,
     }
 
 

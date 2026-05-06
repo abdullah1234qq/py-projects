@@ -10,7 +10,7 @@ import wave
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..config import CHUNK_DIR
+from backend.config import CHUNK_DIR
 
 
 @dataclass(slots=True)
