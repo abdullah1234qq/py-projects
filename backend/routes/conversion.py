@@ -11,6 +11,7 @@ from backend.config import AUDIO_DIR, LANGUAGES, MAX_UPLOAD_BYTES, PDF_DIR, lang
 from backend.services import (
     create_pdf_from_text,
     extract_pdf_text,
+    generate_pdf,
     save_upload,
     synthesize_all_languages,
     synthesize_speech,
@@ -51,13 +52,10 @@ async def audio_to_pdf(
     translated_text = await translate_text(original_text, target_language=target_code)
 
     safe_name = _safe_file_stem(filename or file.filename or "audio-transcript")
-    pdf_path = PDF_DIR / f"{safe_name}-{uuid.uuid4().hex}.pdf"
-    await create_pdf_from_text(translated_text, pdf_path, title="Voice2PDF Transcript")
+    pdf_full_path = generate_pdf(translated_text, target_code, safe_name)
+    pdf_filename = Path(pdf_full_path).name
 
-    if not pdf_path.exists():
-        raise HTTPException(status_code=500, detail="PDF was not created")
-
-    pdf_url = f"http://localhost:8000/api/files/pdf/{pdf_path.name}"
+    pdf_url = f"http://localhost:8000/api/files/pdf/{pdf_filename}"
     return {
         "text": original_text,
         "translated": translated_text,

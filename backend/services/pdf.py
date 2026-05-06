@@ -1,20 +1,128 @@
 from __future__ import annotations
 
 import asyncio
+import html
+import os
 import textwrap
 from pathlib import Path
 
+from backend.config import FONTS_DIR, PDF_DIR
 
-async def create_pdf_from_text(text: str, output_path: Path, title: str = "Voice2PDF") -> Path:
-    return await asyncio.to_thread(_create_pdf_sync, text, output_path, title)
+
+async def create_pdf_from_text(
+    text: str,
+    output_path: Path,
+    title: str = "Voice2PDF",
+    language_code: str = "en",
+) -> Path:
+    return await asyncio.to_thread(_create_pdf_sync, text, output_path, title, language_code)
+
+
+def generate_pdf(text: str, lang: str, filename: str) -> str:
+    """
+    Generate a PDF from text with proper multilingual support, especially Urdu (RTL).
+    
+    Args:
+        text: The text content to convert to PDF
+        lang: Language code (e.g., 'ur', 'ar', 'en')
+        filename: Desired filename without extension
+        
+    Returns:
+        Path to the generated PDF file
+    """
+    # Ensure PDF directory exists
+    PDF_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Generate unique filename
+    import uuid
+    pdf_filename = f"{filename}-{uuid.uuid4().hex}.pdf"
+    pdf_path = PDF_DIR / pdf_filename
+    
+    # Create PDF synchronously
+    _create_pdf_sync(text, pdf_path, "Voice2PDF Transcript", lang)
+    
+    # Validate file creation
+    if not pdf_path.exists():
+        raise Exception("PDF generation failed")
+    
+    # Logging
+    print("Generated PDF:", pdf_path)
+    print("Text Preview:", text[:200])
+    
+    return str(pdf_path)
 
 
 async def extract_pdf_text(path: Path) -> str:
     return await asyncio.to_thread(_extract_pdf_text_sync, path)
 
 
-def _create_pdf_sync(text: str, output_path: Path, title: str) -> Path:
+def _create_pdf_sync(text: str, output_path: Path, title: str, language_code: str) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    text = text or ""
+    safe_text = html.escape(text).replace("\n", "<br>\n")
+    rtl_languages = {"ur", "ar"}
+    is_rtl = language_code.lower() in rtl_languages
+    direction = "rtl" if is_rtl else "ltr"
+    align = "right" if is_rtl else "left"
+
+    try:
+        from weasyprint import HTML
+
+        # Use NotoNastaliqUrdu for Urdu, otherwise NotoSans
+        if is_rtl and language_code.lower() == "ur":
+            font_path = FONTS_DIR / "NotoNastaliqUrdu-Regular.ttf"
+        else:
+            font_path = FONTS_DIR / "NotoSans-Regular.ttf"
+        
+        if not font_path.exists():
+            raise FileNotFoundError(f"Missing font: {font_path}")
+
+        # Use absolute path with file:// protocol
+        abs_font_path = os.path.abspath(font_path)
+        font_url = f"file://{abs_font_path}"
+        
+        html_content = f"""
+        <html>
+        <head>
+        <meta charset="UTF-8">
+        <style>
+        @font-face {{
+            font-family: 'Noto';
+            src: url('{font_url}') format('truetype');
+        }}
+        body {{
+            font-family: 'Noto', sans-serif;
+            direction: {direction};
+            text-align: {align};
+            font-size: 18px;
+            line-height: 2;
+            margin: 1in;
+        }}
+        h1 {{
+            font-size: 24px;
+            margin-bottom: 20px;
+        }}
+        p {{
+            margin: 0;
+            white-space: pre-wrap;
+        }}
+        </style>
+        </head>
+        <body>
+        <h1>{html.escape(title)}</h1>
+        <p>{safe_text}</p>
+        </body>
+        </html>
+        """
+
+        HTML(string=html_content).write_pdf(str(output_path))
+        return output_path
+    except Exception as e:
+        print(f"WeasyPrint failed: {e}")
+        return _create_pdf_reportlab(text, output_path, title)
+
+
+def _create_pdf_reportlab(text: str, output_path: Path, title: str) -> Path:
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.units import inch

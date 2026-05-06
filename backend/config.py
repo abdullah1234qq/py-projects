@@ -3,10 +3,11 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STORAGE_DIR = PROJECT_ROOT / "storage"
-AUDIO_DIR = STORAGE_DIR / "audio"
 PDF_DIR = STORAGE_DIR / "pdf"
+AUDIO_DIR = STORAGE_DIR / "audio"
 TTS_DIR = STORAGE_DIR / "tts"
 CHUNK_DIR = AUDIO_DIR / "chunks"
+FONTS_DIR = PROJECT_ROOT / "fonts"
 
 LANGUAGES = {
     "English": "en",
@@ -43,7 +44,7 @@ TTS_TIMEOUT_SECONDS = 12
 
 
 def ensure_storage_dirs() -> None:
-    for directory in (AUDIO_DIR, PDF_DIR, TTS_DIR, CHUNK_DIR):
+    for directory in (AUDIO_DIR, PDF_DIR, TTS_DIR, CHUNK_DIR, FONTS_DIR):
         directory.mkdir(parents=True, exist_ok=True)
 
 
