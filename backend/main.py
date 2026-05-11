@@ -4,10 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.config import ensure_storage_dirs, PDF_DIR
+from backend.config import PDF_DIR, ensure_storage_dirs
 from backend.routes.conversion import router as conversion_router
 from backend.websocket.transcription import router as websocket_router
-
 
 ensure_storage_dirs()
 

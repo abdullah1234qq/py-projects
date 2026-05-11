@@ -1,11 +1,14 @@
 import { useState } from "react";
 
-import { API_URL, api, downloadFromUrl } from "../api/client";
+import { API_URL, api } from "../api/client";
 import { AudioPlayer } from "../components/AudioPlayer.jsx";
 import { FileUploader } from "../components/FileUploader.jsx";
 import { GlowButton } from "../components/GlowButton.jsx";
 import { NeonHeroMark } from "../components/NeonHeroMark.jsx";
 import { PageHeader } from "../components/PageHeader.jsx";
+import { DownloadButton } from "../components/DownloadButton.jsx";
+import { TranscriptCard } from "../components/TranscriptCard.jsx";
+import { StatusAlert } from "../components/StatusAlert.jsx";
 
 export function PdfToAudio() {
   const [file, setFile] = useState(null);
@@ -31,17 +34,18 @@ export function PdfToAudio() {
       formData.append("language", language);
 
       const response = await api.post("/pdf-to-audio", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       const url = `${API_URL}${response.data.audio_url}`;
       setAudioUrl(url);
       setOriginalText(response.data.original_text || "");
       setTranslatedText(response.data.translated_text || "");
-      await downloadFromUrl(url, "voice2pdf-audio.mp3");
-      setMessage("Audio generated and downloaded.");
+      setMessage("Audio ready.");
     } catch (error) {
-      setMessage(error.response?.data?.detail || error.message || "Conversion failed.");
+      setMessage(
+        error.response?.data?.detail || error.message || "Conversion failed.",
+      );
     } finally {
       setBusy(false);
     }
@@ -59,13 +63,20 @@ export function PdfToAudio() {
       const formData = new FormData();
       formData.append("file", file);
       const response = await api.post("/pdf-to-all-audio", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { "Content-Type": "multipart/form-data" },
       });
       const url = `${API_URL}${response.data.zip_url}`;
-      await downloadFromUrl(url, "voice2pdf-all-audio.zip");
-      setMessage("All-language audio ZIP downloaded.");
+      setOriginalText(response.data.original_text || "");
+      setMessage("ZIP ready.");
+      // ZIP will be downloaded via the DownloadButton below when available
+      setAudioUrl("");
+      setTimeout(() => setMessage(""), 3200);
     } catch (error) {
-      setMessage(error.response?.data?.detail || error.message || "ZIP generation failed.");
+      setMessage(
+        error.response?.data?.detail ||
+          error.message ||
+          "ZIP generation failed.",
+      );
     } finally {
       setZipBusy(false);
     }
@@ -73,13 +84,24 @@ export function PdfToAudio() {
 
   return (
     <div className="work-page">
-      <PageHeader title="PDF to Audio" copy="Upload a PDF and listen to the extracted text." />
+      <PageHeader
+        title="PDF to Audio"
+        copy="Upload a PDF and listen to the extracted text."
+      />
       <NeonHeroMark tone="green" />
-      <FileUploader accept="application/pdf" label="Upload a PDF document" helper="Readable PDFs work best" onFile={setFile} />
+      <FileUploader
+        accept="application/pdf"
+        label="Upload a PDF document"
+        helper="Readable PDFs work best"
+        onFile={setFile}
+      />
       <div className="form-grid one">
         <label>
           <span>Language</span>
-          <select value={language} onChange={(event) => setLanguage(event.target.value)}>
+          <select
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+          >
             <option>English</option>
             <option>Urdu</option>
             <option>Hindi</option>
@@ -90,26 +112,49 @@ export function PdfToAudio() {
           </select>
         </label>
       </div>
-      {audioUrl ? <AudioPlayer sourceUrl={audioUrl} file={{ name: "voice2pdf-audio.mp3" }} duration="Ready" /> : null}
-      <GlowButton tone="green" onClick={convert} disabled={busy}>
-        {busy ? "Generating..." : "Generate Audio"}
-      </GlowButton>
-      <button className="secondary-action" onClick={generateAllAudio} disabled={zipBusy}>
+
+      {audioUrl ? (
+        <AudioPlayer
+          sourceUrl={audioUrl}
+          file={{ name: "voice2pdf-audio.mp3" }}
+        />
+      ) : null}
+
+      <div className="action-row">
+        <GlowButton tone="green" onClick={convert} disabled={busy}>
+          {busy ? "Generating..." : "Generate Audio"}
+        </GlowButton>
+
+        <DownloadButton
+          url={audioUrl}
+          filename="voice2pdf-audio.mp3"
+          tone="green"
+        >
+          Download Audio
+        </DownloadButton>
+      </div>
+
+      <button
+        className="secondary-action"
+        onClick={generateAllAudio}
+        disabled={zipBusy}
+      >
         {zipBusy ? "Building ZIP..." : "Generate All Languages"}
       </button>
+
       {originalText ? (
-        <div className="result-card">
-          <strong>Original Text</strong>
-          <pre>{originalText}</pre>
-        </div>
+        <TranscriptCard title="Original Text" content={originalText} />
       ) : null}
       {translatedText ? (
-        <div className="result-card">
-          <strong>Translated Text</strong>
-          <pre>{translatedText}</pre>
-        </div>
+        <TranscriptCard title="Translated Text" content={translatedText} />
       ) : null}
-      {message ? <p className="status-line">{message}</p> : null}
+
+      {message ? (
+        <StatusAlert
+          message={message}
+          type={message.toLowerCase().includes("failed") ? "error" : "success"}
+        />
+      ) : null}
     </div>
   );
 }
