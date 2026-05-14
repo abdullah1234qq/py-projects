@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 
+import { API_URL, api } from "../api/client";
 import { AudioPlayer } from "../components/AudioPlayer.jsx";
 import { FileUploader } from "../components/FileUploader.jsx";
 import { GlowButton } from "../components/GlowButton.jsx";
@@ -16,7 +17,6 @@ export function AudioToPdf() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [originalText, setOriginalText] = useState("");
-  const BASE_URL = "http://127.0.0.1:8000";
   const [translatedText, setTranslatedText] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
   const audioUrl = useMemo(
@@ -37,21 +37,14 @@ export function AudioToPdf() {
       formData.append("language", language);
       formData.append("filename", filename || "voice2pdf");
 
-      const response = await fetch(`${BASE_URL}/audio-to-pdf`, {
-        method: "POST",
-        body: formData,
+      const response = await api.post("/convert", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(
-          data.detail || data.message || "Backend returned an error",
-        );
-      }
-
+      const data = response.data;
       const url = data.pdf_url?.startsWith("http")
         ? data.pdf_url
-        : `${BASE_URL}${data.pdf_url}`;
+        : `${API_URL}${data.pdf_url}`;
       setPdfUrl(url);
       setOriginalText(data.original_text || "");
       setTranslatedText(data.translated_text || "");

@@ -7,7 +7,7 @@ import {
   logInfo
 } from '../utils/logger';
 
-const BASE_URL = 'http://YOUR_LOCAL_IP:8000';
+const BASE_URL = 'https://py-projects--abdullah1234qq.replit.app';
 
 const guessMimeType = (name) => {
   const lower = (name || '').toLowerCase();
@@ -130,7 +130,7 @@ export async function audioToPDF(file, filename, language = 'English') {
 
     await logInfo(`Starting audio to PDF conversion | File: ${file.name} | Language: ${language}`, context);
 
-    const result = await fetchWithLogging('/audio-to-pdf', {
+    const result = await fetchWithLogging('/api/convert', {
       method: 'POST',
       body: data,
     });
@@ -162,7 +162,7 @@ export async function pdfToAudio(file, language = 'English') {
 
     await logInfo(`Starting PDF to audio conversion | File: ${file.name} | Language: ${language}`, context);
 
-    const result = await fetchWithLogging('/pdf-to-audio', {
+    const result = await fetchWithLogging('/api/pdf-to-audio', {
       method: 'POST',
       body: data,
     });
@@ -193,7 +193,7 @@ export async function pdfToAllAudio(file) {
 
     await logInfo(`Starting PDF to all audio conversion | File: ${file.name}`, context);
 
-    const result = await fetchWithLogging('/pdf-to-all-audio', {
+    const result = await fetchWithLogging('/api/pdf-to-all-audio', {
       method: 'POST',
       body: data,
     });
@@ -225,7 +225,7 @@ export async function realtimeAPI(file, language = 'English') {
 
     await logInfo(`Starting realtime processing | File: ${file.name} | Language: ${language}`, context);
 
-    const result = await fetchWithLogging('/realtime', {
+    const result = await fetchWithLogging('/api/transcribe', {
       method: 'POST',
       body: data,
     });

@@ -3,8 +3,15 @@ import { useRef, useState } from "react";
 import { api, downloadBlob, filenameFromHeaders, wsUrl } from "../api/client";
 
 function pickMimeType() {
-  const types = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
-  return types.find((type) => window.MediaRecorder?.isTypeSupported(type)) || "";
+  const types = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4",
+  ];
+  return (
+    types.find((type) => window.MediaRecorder?.isTypeSupported(type)) || ""
+  );
 }
 
 export function useRealtimeTranscription(language = "en") {
@@ -18,7 +25,10 @@ export function useRealtimeTranscription(language = "en") {
   const timerRef = useRef(null);
   const startedAtRef = useRef(0);
 
-  const transcript = segments.map((segment) => segment.text).filter(Boolean).join(" ");
+  const transcript = segments
+    .map((segment) => segment.text)
+    .filter(Boolean)
+    .join(" ");
 
   async function start() {
     if (status === "listening") {
@@ -29,16 +39,25 @@ export function useRealtimeTranscription(language = "en") {
     setElapsed(0);
 
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const socket = new WebSocket(wsUrl("/ws/audio"));
+    const socket = new WebSocket(wsUrl("/ws/transcribe"));
     const mimeType = pickMimeType();
-    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    const recorder = new MediaRecorder(
+      stream,
+      mimeType ? { mimeType } : undefined,
+    );
 
     streamRef.current = stream;
     socketRef.current = socket;
     recorderRef.current = recorder;
 
     socket.onopen = () => {
-      socket.send(JSON.stringify({ type: "config", language, mimeType: mimeType || "audio/webm" }));
+      socket.send(
+        JSON.stringify({
+          type: "config",
+          language,
+          mimeType: mimeType || "audio/webm",
+        }),
+      );
       recorder.start(1000);
       startedAtRef.current = Date.now();
       timerRef.current = window.setInterval(() => {
@@ -51,10 +70,13 @@ export function useRealtimeTranscription(language = "en") {
       const payload = JSON.parse(event.data);
       if (payload.type === "transcript") {
         setSegments((current) => {
-          const next = current.filter((segment) => segment.sequence !== payload.sequence);
-          return [...next, { sequence: payload.sequence, text: payload.text }].sort(
-            (a, b) => a.sequence - b.sequence
+          const next = current.filter(
+            (segment) => segment.sequence !== payload.sequence,
           );
+          return [
+            ...next,
+            { sequence: payload.sequence, text: payload.text },
+          ].sort((a, b) => a.sequence - b.sequence);
         });
       }
     };
@@ -90,11 +112,17 @@ export function useRealtimeTranscription(language = "en") {
 
   async function savePdf() {
     const response = await api.post(
-      "/text-to-pdf",
-      { text: transcript || "No transcript captured yet.", title: "Live Voice2PDF Transcript" },
-      { responseType: "blob" }
+      "/realtime-pdf",
+      {
+        text: transcript || "No transcript captured yet.",
+        title: "Live Voice2PDF Transcript",
+      },
+      { responseType: "blob" },
     );
-    downloadBlob(response.data, filenameFromHeaders(response.headers, "live-transcript.pdf"));
+    downloadBlob(
+      response.data,
+      filenameFromHeaders(response.headers, "live-transcript.pdf"),
+    );
   }
 
   return {
@@ -105,6 +133,6 @@ export function useRealtimeTranscription(language = "en") {
     start,
     status,
     stop,
-    transcript
+    transcript,
   };
 }

@@ -86,7 +86,7 @@ export function Realtime() {
       formData.append("file", blob, "realtime.webm");
       formData.append("language", language);
 
-      const response = await api.post("/realtime", formData, {
+      const response = await api.post("/transcribe", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

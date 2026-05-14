@@ -6,12 +6,18 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
-from backend.config import AUDIO_DIR, LANGUAGES, MAX_UPLOAD_BYTES, PDF_DIR, language_code
+from backend.config import (
+    AUDIO_DIR,
+    LANGUAGES,
+    MAX_UPLOAD_BYTES,
+    PDF_DIR,
+    language_code,
+)
 from backend.services import (
     create_pdf_from_text,
     extract_pdf_text,
-    generate_pdf,
     save_upload,
     synthesize_all_languages,
     synthesize_speech,
@@ -34,6 +40,7 @@ def _safe_file_stem(name: str) -> str:
 
 
 @router.post("/audio-to-pdf")
+@router.post("/convert")
 async def audio_to_pdf(
     file: Annotated[UploadFile, File(...)],
     language: Annotated[str | None, Form()] = "English",
@@ -51,11 +58,39 @@ async def audio_to_pdf(
     target_code = language_code(final_language)
     translated_text = await translate_text(original_text, target_language=target_code)
 
-    safe_name = _safe_file_stem(filename or file.filename or "audio-transcript")
-    pdf_full_path = generate_pdf(translated_text, target_code, safe_name)
-    pdf_filename = Path(pdf_full_path).name
+    # Build a human-friendly title from the provided filename or uploaded file name
+    uploaded_name = (
+        filename
+        or (file.filename if hasattr(file, "filename") else None)
+        or "audio-transcript"
+    )
+    clean_name = (
+        Path(str(uploaded_name))
+        .stem.replace("_", " ")
+        .replace("-", " ")
+        .strip()
+        .title()
+    )
 
-    pdf_url = f"http://localhost:8000/api/files/pdf/{pdf_filename}"
+    # Create a safe filename for storage and replace spaces with underscores
+    safe_filename = (
+        filename.strip().replace(" ", "_")
+        if filename and filename.strip()
+        else clean_name.replace(" ", "_")
+    )
+
+    # Ensure PDF directory exists and write the PDF with the clean title
+    PDF_DIR.mkdir(parents=True, exist_ok=True)
+    pdf_path = PDF_DIR / f"{safe_filename}.pdf"
+
+    # Generate the PDF and set its title to the cleaned name
+    await create_pdf_from_text(
+        translated_text, pdf_path, title=clean_name, language_code=target_code
+    )
+
+    pdf_filename = pdf_path.name
+    pdf_url = f"/api/files/pdf/{pdf_filename}"
+
     return {
         "text": original_text,
         "translated": translated_text,
@@ -101,7 +136,19 @@ async def pdf_to_all_audio(file: Annotated[UploadFile, File(...)]) -> dict[str, 
     }
 
 
+@router.post("/realtime-pdf")
+async def realtime_pdf(
+    text: Annotated[str, Form()],
+    title: Annotated[str | None, Form()] = "Live Voice2PDF Transcript",
+) -> FileResponse:
+    pdf_filename = f"{uuid.uuid4().hex}.pdf"
+    pdf_path = PDF_DIR / pdf_filename
+    await create_pdf_from_text(text, pdf_path, title=title or "Live Voice2PDF Transcript")
+    return FileResponse(pdf_path, media_type="application/pdf", filename=pdf_filename)
+
+
 @router.post("/realtime")
+@router.post("/transcribe")
 async def realtime(
     file: Annotated[UploadFile, File(...)],
     language: Annotated[str | None, Form()] = "English",

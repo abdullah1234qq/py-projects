@@ -6,12 +6,9 @@
 export const APP_CONFIG = {
   // 🔧 Backend Configuration
   BACKEND: {
-    // Update this to your FastAPI server's IP address
-    // Examples:
-    // - Local machine: http://192.168.1.100:8000
-    // - Localhost: http://localhost:8000
-    // - Production: https://api.yourdomain.com
-    BASE_URL: 'http://YOUR_LOCAL_IP:8000',
+    // Update this to your FastAPI server's URL
+    // Example: https://py-projects--abdullah1234qq.replit.app
+    BASE_URL: 'https://py-projects--abdullah1234qq.replit.app',
 
     // API timeout in milliseconds
     TIMEOUT: 120000,
