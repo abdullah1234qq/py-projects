@@ -6,6 +6,7 @@ router = APIRouter(tags=["websocket"])
 
 
 @router.websocket("/ws/audio")
+@router.websocket("/ws/transcribe")
 async def stream_audio(websocket: WebSocket) -> None:
     transcriber = RealtimeTranscriber(websocket)
     await transcriber.run()
